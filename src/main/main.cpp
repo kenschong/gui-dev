@@ -73,6 +73,73 @@ float getThrustLevel(float stick) {
     return 2;
 }
 
+void drawAttitudeGauge(ImDrawList* drawList, ImVec2 center, float radius, 
+                       float angle, ImU32 color, const char* label, 
+                       const char* labels[4]) {
+    // Draw a circle for the indicator gauge
+    drawList->AddCircleFilled(center, radius, IM_COL32(26, 26, 26, 255));
+
+    // Define major angles for labels
+    float majorAngles[] = {0, 90, 180, 270};
+
+    for (int i = 0; i < 4; i++) {
+        // Calculate coordinates to draw tick marks
+        float rad       = (majorAngles[i] - 90) * DEG_TO_RAD;
+        float x1        = center.x + (radius - 15) * cos(rad);
+        float y1        = center.y + (radius - 15) * sin(rad);
+        float x2        = center.x + radius * cos(rad);
+        float y2        = center.y + radius * sin(rad);
+        
+        // Add tick marks at the major angles
+        drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), 
+                         IM_COL32(255, 255, 255, 255), 2.0f);
+        
+        // Calculate coordinates for desired label location
+        float labelX    = center.x + (radius - 30) * cos(rad);
+        float labelY    = center.y + (radius - 30) * sin(rad);
+
+        // Add label at the major angles defined before
+        ImVec2 textSize = ImGui::CalcTextSize(labels[i]);
+        drawList->AddText(ImVec2(labelX - textSize.x/2, labelY - textSize.y/2), 
+                         IM_COL32(255, 255, 255, 255), labels[i]);
+    }
+    
+    for (int deg = 0; deg < 360; deg += 30) {
+        // Define condition when to add minor tick marks 
+        bool isMajor    = (deg == 0 || deg == 90 || deg == 180 || deg == 270);
+        
+        if (!isMajor) {
+            // Calculate coordinates for minor tick marks
+            float rad   = (deg - 90) * DEG_TO_RAD;
+            float x1    = center.x + (radius - 8) * cos(rad);
+            float y1    = center.y + (radius - 8) * sin(rad);
+            float x2    = center.x + radius * cos(rad);
+            float y2    = center.y + radius * sin(rad);
+
+            // Add minor tick marks to indicator design
+            drawList->AddLine(ImVec2(x1, y1), ImVec2(x2, y2), 
+                             IM_COL32(255, 255, 255, 255), 1.0f);
+        }
+    }
+    
+    // Calculate the length of the indicator needle
+    float pointerRad    = (angle - 90) * DEG_TO_RAD;
+    float pointerLength = radius - 25;
+
+    // Calculate coordinates to draw needle
+    float endX          = center.x + pointerLength * cos(pointerRad);
+    float endY          = center.y + pointerLength * sin(pointerRad);
+    
+    // Add needle to the indicator gauge design
+    drawList->AddLine(center, ImVec2(endX, endY), color, 4.0f);
+    drawList->AddCircleFilled(ImVec2(endX, endY), 8.0f, color);
+    
+    // Add indicator gauge label (ROLL/PITCH/YAW)
+    ImVec2 textSize = ImGui::CalcTextSize(label);
+    drawList->AddText(ImVec2(center.x - textSize.x/2, center.y + radius + 10), 
+                     IM_COL32(255, 255, 255, 255), label);
+}
+
 int main() {
     return 0;
 }
