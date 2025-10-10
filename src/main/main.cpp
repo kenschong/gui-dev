@@ -73,6 +73,79 @@ float getThrustLevel(float stick) {
     return 2;
 }
 
+// Restrict the rate value to a specific range
+float clamp(float value, float min, float max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
+// Update the spacecraft physics
+void updateSpacecraft(SpacecraftState& state, float deltaTime) {
+    // Update rate state for manual mode
+    if (state.mode == RATE_COMMAND) {
+        // Smooth the rate indicator needles
+        state.rollRate += (state.rollCommand - state.rollRate) * 0.3f;
+        state.pitchRate += (state.pitchCommand - state.pitchRate) * 0.3f;
+        state.yawRate += (state.yawCommand - state.yawRate) * 0.3f;
+        
+        // Prevent unrealistic spacecraft motion
+        state.rollRate = clamp(state.rollRate, -100.0f, 100.0f);
+        state.pitchRate = clamp(state.pitchRate, -100.0f, 100.0f);
+        state.yawRate = clamp(state.yawRate, -100.0f, 100.0f);
+        
+        // Update the orientation angles
+        state.roll = wrapAngle(state.roll + state.rollRate * deltaTime * 3.0f);
+        state.pitch = wrapAngle(state.pitch + state.pitchRate * deltaTime * 3.0f);
+        state.yaw = wrapAngle(state.yaw + state.yawRate * deltaTime * 3.0f);
+    } else if (state.mode == FLY_BY_WIRE) {
+        // Retrieve thrust level from user input
+        int rollThrust = getThrustLevel(state.flyByWireRoll);
+        int pitchThrust = getThrustLevel(state.flyByWirePitch);
+        int yawThrust = getThrustLevel(state.flyByWireYaw);
+        
+        // Calculate the thrust rate for respective axis
+        if (rollThrust > 0) {
+            float thrustAmount = (rollThrust == 1) ? 15.0f : 40.0f;
+            float direction = (state.flyByWireRoll > 0) ? 1.0f : -1.0f;
+            state.rollRate = thrustAmount * direction + state.disturbanceRoll * 0.3f;
+        } else {
+            state.rollRate = state.rollRate * 0.95f + state.disturbanceRoll * 0.3f;
+        }
+        
+        if (pitchThrust > 0) {
+            float thrustAmount = (pitchThrust == 1) ? 15.0f : 40.0f;
+            float direction = (state.flyByWirePitch > 0) ? 1.0f : -1.0f;
+            state.pitchRate = thrustAmount * direction + state.disturbancePitch * 0.3f;
+        } else {
+            state.pitchRate = state.pitchRate * 0.95f + state.disturbancePitch * 0.3f;
+        }
+        
+        if (yawThrust > 0) {
+            float thrustAmount = (yawThrust == 1) ? 15.0f : 40.0f;
+            float direction = (state.flyByWireYaw > 0) ? 1.0f : -1.0f;
+            state.yawRate = thrustAmount * direction + state.disturbanceYaw * 0.3f;
+        } else {
+            state.yawRate = state.yawRate * 0.95f + state.disturbanceYaw * 0.3f;
+        }
+        
+        // Prevent unrealistic spacecraft motion
+        state.rollRate = clamp(state.rollRate, -100.0f, 100.0f);
+        state.pitchRate = clamp(state.pitchRate, -100.0f, 100.0f);
+        state.yawRate = clamp(state.yawRate, -100.0f, 100.0f);
+        
+        // Update the orientation angles
+        state.roll = wrapAngle(state.roll + state.rollRate * deltaTime * 3.0f);
+        state.pitch = wrapAngle(state.pitch + state.pitchRate * deltaTime * 3.0f);
+        state.yaw = wrapAngle(state.yaw + state.yawRate * deltaTime * 3.0f);
+    } else {
+        // Prevent unrealistic spacecraft motion
+        state.rollRate = clamp(state.rollRate, -100.0f, 100.0f);
+        state.pitchRate = clamp(state.pitchRate, -100.0f, 100.0f);
+        state.yawRate = clamp(state.yawRate, -100.0f, 100.0f);
+    }
+}
+
 // Draw the individual attitude indicator gauges
 void drawAttitudeGauge(ImDrawList* drawList, ImVec2 center, float radius, 
                        float angle, ImU32 color, const char* label, 
