@@ -73,6 +73,7 @@ float getThrustLevel(float stick) {
     return 2;
 }
 
+// Draw the individual attitude indicator gauges
 void drawAttitudeGauge(ImDrawList* drawList, ImVec2 center, float radius, 
                        float angle, ImU32 color, const char* label, 
                        const char* labels[4]) {
@@ -138,6 +139,67 @@ void drawAttitudeGauge(ImDrawList* drawList, ImVec2 center, float radius,
     ImVec2 textSize = ImGui::CalcTextSize(label);
     drawList->AddText(ImVec2(center.x - textSize.x/2, center.y + radius + 10), 
                      IM_COL32(255, 255, 255, 255), label);
+}
+
+void drawRateIndicator(ImDrawList* drawList, ImVec2 center, float size,
+                       float rollRate, float pitchRate, float yawRate) {
+    // Draw the rate indicator background
+    drawList->AddRectFilled(ImVec2(center.x - size/2, center.y - size/2),
+                           ImVec2(center.x + size/2, center.y + size/2),
+                           IM_COL32(26, 26, 26, 255));
+    
+    // Draw the reference crosshairs
+    drawList->AddLine(ImVec2(center.x - 70, center.y), 
+                     ImVec2(center.x + 70, center.y),
+                     IM_COL32(255, 255, 255, 255), 2.0f);
+    drawList->AddLine(ImVec2(center.x, center.y - 70),
+                     ImVec2(center.x, center.y + 70),
+                     IM_COL32(255, 255, 255, 255), 2.0f);
+    
+    // Define rate bar
+    float maxBarLength = 60.0f;
+    
+    // Define roll rate for the reference crosshair
+    float rollBarLength = (rollRate / 100.0f) * maxBarLength;
+
+    // Update the reference crosshair accordingly
+    drawList->AddRectFilled(ImVec2(center.x - 2, center.y - 40),
+                           ImVec2(center.x + 2, center.y - 25),
+                           IM_COL32(255, 165, 0, 255));
+    drawList->AddRectFilled(ImVec2(center.x - 2, center.y + 25),
+                           ImVec2(center.x + 2, center.y + 40),
+                           IM_COL32(255, 165, 0, 255));
+    if (std::abs(rollBarLength) > 0) {
+        drawList->AddRectFilled(ImVec2(center.x, center.y - 35),
+                               ImVec2(center.x + rollBarLength, center.y - 30),
+                               IM_COL32(255, 165, 0, 255));
+    }
+    
+    // Define pitch rate for the reference crosshair
+    float pitchBarLength = (pitchRate / 100.0f) * maxBarLength;
+
+    // Update the reference crosshair accordingly
+    drawList->AddRectFilled(ImVec2(center.x + 25, center.y - 2),
+                           ImVec2(center.x + 40, center.y + 2),
+                           IM_COL32(74, 144, 226, 255));
+    if (std::abs(pitchBarLength) > 0) {
+        drawList->AddRectFilled(ImVec2(center.x + 30, center.y),
+                               ImVec2(center.x + 35, center.y - pitchBarLength),
+                               IM_COL32(74, 144, 226, 255));
+    }
+    
+    // Define yaw rate for the reference crosshair
+    float yawBarLength = (yawRate / 100.0f) * maxBarLength;
+
+    // Update the reference crosshair accordingly
+    drawList->AddRectFilled(ImVec2(center.x - 40, center.y - 2),
+                           ImVec2(center.x - 25, center.y + 2),
+                           IM_COL32(76, 175, 80, 255));
+    if (std::abs(yawBarLength) > 0) {
+        drawList->AddRectFilled(ImVec2(center.x - 35, center.y),
+                               ImVec2(center.x - 30, center.y - yawBarLength),
+                               IM_COL32(76, 175, 80, 255));
+    }
 }
 
 int main() {
