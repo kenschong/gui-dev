@@ -27,7 +27,7 @@ enum Scenario {
 };
 
 // Define default spacecraft state
-struct Spacecraft {
+struct SpacecraftState {
     // Define attitude indicator needles
     float roll              = 0.0f;
     float pitch             = 0.0f;
@@ -53,7 +53,7 @@ struct Spacecraft {
     
     float lastUpdateTime    = 0.0f;
     float scenarioTime      = 0.0f;
-}
+};
 
 // Allows needle on the indicator to rotate continuously
 float wrapAngle(float angle) {
