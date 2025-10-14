@@ -36,6 +36,9 @@ int main() {
         float deltaTime = currentTime - state.lastUpdateTime;
         state.lastUpdateTime = currentTime;
         
+        // Update scenario disturbances
+        updateScenario(state, deltaTime);
+
         // Update physics
         updateSpacecraft(state, deltaTime);
         
@@ -55,6 +58,53 @@ int main() {
         ImGui::Text("PROJECT MERCURY ATTITUDE INDICATOR");
         ImGui::Separator();
         ImGui::Spacing();
+        
+        // Scenario selection
+        ImGui::Text("Mission Scenario:");
+        ImGui::SameLine();
+        if (ImGui::Button("None")) {
+            state.scenario = NONE;
+            state.scenarioTime = 0.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Retrofire")) {
+            state.scenario = RETROFIRE;
+            state.scenarioTime = 0.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Tumble")) {
+            state.scenario = TUMBLE;
+            state.scenarioTime = 0.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Stuck Thruster")) {
+            state.scenario = THRUSTER_STUCK;
+            state.scenarioTime = 0.0f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Orbital Drift")) {
+            state.scenario = ORBITAL_DRIFT;
+            state.scenarioTime = 0.0f;
+        }
+
+        // Scenario description
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+        if (state.scenario == NONE) {
+            ImGui::Text("No disturbances - ideal conditions for testing");
+        } else if (state.scenario == RETROFIRE) {
+            ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), 
+                "RETROFIRE: Varying torques from retrorocket misalignment");
+        } else if (state.scenario == TUMBLE) {
+            ImGui::TextColored(ImVec4(0.8f, 0.3f, 0.8f, 1.0f), 
+                "TUMBLE: High random torques causing rapid rotation");
+        } else if (state.scenario == THRUSTER_STUCK) {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.0f, 1.0f), 
+                "STUCK THRUSTER: Constant roll torque - compensate to maintain attitude");
+        } else if (state.scenario == ORBITAL_DRIFT) {
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.8f, 1.0f), 
+                "ORBITAL DRIFT: Small random disturbances");
+        }
+        ImGui::PopStyleColor();
         
         ImGui::Spacing();
         ImGui::Separator();

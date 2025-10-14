@@ -80,14 +80,44 @@ float clamp(float value, float min, float max) {
     return value;
 }
 
+void updateScenario(SpacecraftState& state, float deltaTime) {
+    state.scenarioTime += deltaTime;
+    
+    if (state.scenario == RETROFIRE) {
+        // Varying torques during retrofire
+        state.disturbanceRoll = std::sin(state.scenarioTime * 0.5f) * 4.0f + (rand() % 100 - 50) / 50.0f * 1.5f;
+        state.disturbancePitch = std::cos(state.scenarioTime * 0.7f) * 3.0f + (rand() % 100 - 50) / 50.0f * 1.0f;
+        state.disturbanceYaw = std::sin(state.scenarioTime * 0.3f) * 2.5f + (rand() % 100 - 50) / 50.0f * 1.0f;
+    } else if (state.scenario == TUMBLE) {
+        // High random torques
+        state.disturbanceRoll = (rand() % 100 - 50) / 50.0f * 15.0f;
+        state.disturbancePitch = (rand() % 100 - 50) / 50.0f * 15.0f;
+        state.disturbanceYaw = (rand() % 100 - 50) / 50.0f * 15.0f;
+    } else if (state.scenario == THRUSTER_STUCK) {
+        // Constant torque in roll
+        state.disturbanceRoll = 8.0f;
+        state.disturbancePitch = 0.0f;
+        state.disturbanceYaw = 0.0f;
+    } else if (state.scenario == ORBITAL_DRIFT) {
+        // Small random disturbances
+        state.disturbanceRoll = (rand() % 100 - 50) / 50.0f * 2.0f;
+        state.disturbancePitch = (rand() % 100 - 50) / 50.0f * 2.0f;
+        state.disturbanceYaw = (rand() % 100 - 50) / 50.0f * 2.0f;
+    } else {
+        state.disturbanceRoll = 0.0f;
+        state.disturbancePitch = 0.0f;
+        state.disturbanceYaw = 0.0f;
+    }
+}
+
 // Update the spacecraft physics
 void updateSpacecraft(SpacecraftState& state, float deltaTime) {
-    // Update rate state for manual mode
+    // Update rate state for all modes
     if (state.mode == RATE_COMMAND) {
         // Smooth the rate indicator needles
-        state.rollRate += (state.rollCommand - state.rollRate) * 0.3f;
-        state.pitchRate += (state.pitchCommand - state.pitchRate) * 0.3f;
-        state.yawRate += (state.yawCommand - state.yawRate) * 0.3f;
+        state.rollRate += (state.rollCommand - state.rollRate) * 0.3f  + state.disturbanceRoll * 0.3f;
+        state.pitchRate += (state.pitchCommand - state.pitchRate) * 0.3f + state.disturbancePitch * 0.3f;
+        state.yawRate += (state.yawCommand - state.yawRate) * 0.3f + state.disturbanceYaw * 0.3f;
         
         // Prevent unrealistic spacecraft motion
         state.rollRate = clamp(state.rollRate, -100.0f, 100.0f);
@@ -108,25 +138,25 @@ void updateSpacecraft(SpacecraftState& state, float deltaTime) {
         if (rollThrust > 0) {
             float thrustAmount = (rollThrust == 1) ? 15.0f : 40.0f;
             float direction = (state.flyByWireRoll > 0) ? 1.0f : -1.0f;
-            state.rollRate = thrustAmount * direction;
+            state.rollRate = thrustAmount * direction + state.disturbanceRoll * 0.3f;
         } else {
-            state.rollRate = state.rollRate * 0.95f;
+            state.rollRate = state.rollRate * 0.95f + state.disturbanceRoll * 0.3f;
         }
         
         if (pitchThrust > 0) {
             float thrustAmount = (pitchThrust == 1) ? 15.0f : 40.0f;
             float direction = (state.flyByWirePitch > 0) ? 1.0f : -1.0f;
-            state.pitchRate = thrustAmount * direction;
+            state.pitchRate = thrustAmount * direction + state.disturbancePitch * 0.3f;
         } else {
-            state.pitchRate = state.pitchRate * 0.95f;
+            state.pitchRate = state.pitchRate * 0.95f + state.disturbancePitch * 0.3f;
         }
         
         if (yawThrust > 0) {
             float thrustAmount = (yawThrust == 1) ? 15.0f : 40.0f;
             float direction = (state.flyByWireYaw > 0) ? 1.0f : -1.0f;
-            state.yawRate = thrustAmount * direction;
+            state.yawRate = thrustAmount * direction + state.disturbanceYaw * 0.3f;
         } else {
-            state.yawRate = state.yawRate * 0.95f;
+            state.yawRate = state.yawRate * 0.95f + state.disturbanceYaw * 0.3f;
         }
         
         // Prevent unrealistic spacecraft motion
