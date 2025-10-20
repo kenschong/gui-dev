@@ -44,6 +44,7 @@ Thumbs.db
 *.o
 *.out
 gui_app
+test_udp_sender
 
 # ImGui generated files
 imgui.ini
