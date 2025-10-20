@@ -169,10 +169,16 @@ void updateSpacecraft(SpacecraftState& state, float deltaTime) {
         state.pitch = wrapAngle(state.pitch + state.pitchRate * deltaTime * 3.0f);
         state.yaw = wrapAngle(state.yaw + state.yawRate * deltaTime * 3.0f);
     } else {
+        // MANUAL mode - integrate rates into angles
         // Prevent unrealistic spacecraft motion
         state.rollRate = clamp(state.rollRate, -100.0f, 100.0f);
         state.pitchRate = clamp(state.pitchRate, -100.0f, 100.0f);
         state.yawRate = clamp(state.yawRate, -100.0f, 100.0f);
+
+        // Update the orientation angles from rates
+        state.roll = wrapAngle(state.roll + state.rollRate * deltaTime * 3.0f);
+        state.pitch = wrapAngle(state.pitch + state.pitchRate * deltaTime * 3.0f);
+        state.yaw = wrapAngle(state.yaw + state.yawRate * deltaTime * 3.0f);
     }
 }
 

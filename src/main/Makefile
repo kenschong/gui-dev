@@ -1,13 +1,14 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++11 -I ../../imgui/ -I ../../imgui/backends/
-LDFLAGS = -lGL -lglfw
+CXXFLAGS = -std=c++11 -I ../../imgui/ -I ../../imgui/backends/ -pthread
+LDFLAGS = -lGL -lglfw -pthread
 
 # Target executable
 TARGET = gui_app
 
 # Source files
 SOURCES = main.cpp \
+          udp_receiver.cpp \
           ../../imgui/imgui.cpp \
           ../../imgui/imgui_draw.cpp \
           ../../imgui/imgui_widgets.cpp \

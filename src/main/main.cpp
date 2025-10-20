@@ -1,4 +1,6 @@
 #include "design.cpp"
+#include "udp_receiver.h"
+#include <iostream>
 
 int main() {
     // Initialize GLFW
@@ -25,17 +27,45 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
     ImGui::StyleColorsDark();
-    
+
     SpacecraftState state;
+
+    // Initialize UDP receiver for joystick inputs
+    UDPReceiver udpReceiver(8888);
+    if (!udpReceiver.start()) {
+        std::cerr << "Warning: Failed to start UDP receiver. Continuing without UDP input." << std::endl;
+    }
     
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        
+
         // Calculate delta time
         float currentTime = glfwGetTime();
         float deltaTime = currentTime - state.lastUpdateTime;
         state.lastUpdateTime = currentTime;
-        
+
+        // Check for UDP joystick inputs
+        JoystickInputPacket joystickInput;
+        if (udpReceiver.getLatestInput(joystickInput)) {
+            // Apply joystick inputs based on current control mode
+            if (state.mode == MANUAL) {
+                // In manual mode, map joystick to rate controls directly
+                state.rollRate = joystickInput.rollInput;
+                state.pitchRate = joystickInput.pitchInput;
+                state.yawRate = joystickInput.yawInput;
+            } else if (state.mode == RATE_COMMAND) {
+                // In rate command mode, map joystick to rate commands (1:1 mapping)
+                state.rollCommand = joystickInput.rollInput;
+                state.pitchCommand = joystickInput.pitchInput;
+                state.yawCommand = joystickInput.yawInput;
+            } else if (state.mode == FLY_BY_WIRE) {
+                // In fly-by-wire mode, map joystick to stick positions
+                state.flyByWireRoll = joystickInput.rollInput;
+                state.flyByWirePitch = joystickInput.pitchInput;
+                state.flyByWireYaw = joystickInput.yawInput;
+            }
+        }
+
         // Update scenario disturbances
         updateScenario(state, deltaTime);
 
@@ -56,6 +86,20 @@ int main() {
         
         ImGui::SetWindowFontScale(1.2f);
         ImGui::Text("PROJECT MERCURY ATTITUDE INDICATOR");
+
+        // Display UDP status
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 350);
+        if (udpReceiver.hasReceivedData()) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "UDP: CONNECTED");
+            ImGui::SameLine();
+            if (ImGui::Button("Disconnect UDP")) {
+                udpReceiver.reset();
+            }
+        } else {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "UDP: WAITING (Port %d)", udpReceiver.getPort());
+        }
+
         ImGui::Separator();
         ImGui::Spacing();
         
@@ -139,7 +183,7 @@ int main() {
         ImGui::SetCursorPosY(630);
         ImGui::Text("Control Mode:");
         ImGui::SameLine();
-        
+
         if (ImGui::Button("MANUAL")) {
             state.mode = MANUAL;
             state.rollCommand = 0; state.pitchCommand = 0; state.yawCommand = 0;
