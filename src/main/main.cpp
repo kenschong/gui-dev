@@ -1,13 +1,19 @@
-#include "design.cpp"
-#include "udp_receiver.h"
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <GLFW/glfw3.h>
 #include <iostream>
+
+#include "state.h"
+#include "display.h"
+#include "rendering.h"
+#include "udp_receiver.h"
 
 int main() {
     // Initialize GLFW
     if (!glfwInit())
         return -1;
     
-    // Create window
     GLFWwindow* window = glfwCreateWindow(1400, 900, 
                                           "Project Mercury Attitude Indicator", 
                                           NULL, NULL);
@@ -30,7 +36,7 @@ int main() {
 
     SpacecraftState state;
 
-    // Initialize UDP receiver for joystick inputs
+    // Initialize UDP receiver
     UDPReceiver udpReceiver(8888);
     if (!udpReceiver.start()) {
         std::cerr << "Warning: Failed to start UDP receiver. Continuing without UDP input." << std::endl;
@@ -47,29 +53,23 @@ int main() {
         // Check for UDP joystick inputs
         JoystickInputPacket joystickInput;
         if (udpReceiver.getLatestInput(joystickInput)) {
-            // Apply joystick inputs based on current control mode
             if (state.mode == MANUAL) {
-                // In manual mode, map joystick to rate controls directly
                 state.rollRate = joystickInput.rollInput;
                 state.pitchRate = joystickInput.pitchInput;
                 state.yawRate = joystickInput.yawInput;
             } else if (state.mode == RATE_COMMAND) {
-                // In rate command mode, map joystick to rate commands (1:1 mapping)
                 state.rollCommand = joystickInput.rollInput;
                 state.pitchCommand = joystickInput.pitchInput;
                 state.yawCommand = joystickInput.yawInput;
             } else if (state.mode == FLY_BY_WIRE) {
-                // In fly-by-wire mode, map joystick to stick positions
                 state.flyByWireRoll = joystickInput.rollInput;
                 state.flyByWirePitch = joystickInput.pitchInput;
                 state.flyByWireYaw = joystickInput.yawInput;
             }
         }
 
-        // Update scenario disturbances
-        updateScenario(state, deltaTime);
-
         // Update physics
+        updateScenario(state, deltaTime);
         updateSpacecraft(state, deltaTime);
         
         // Start ImGui frame
@@ -77,7 +77,7 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
-        // Create main window
+        // Main window
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);
         ImGui::Begin("Mercury Attitude Indicator", nullptr, 
@@ -87,7 +87,7 @@ int main() {
         ImGui::SetWindowFontScale(1.2f);
         ImGui::Text("PROJECT MERCURY ATTITUDE INDICATOR");
 
-        // Display UDP status
+        // UDP status
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 350);
         if (udpReceiver.hasReceivedData()) {
@@ -154,22 +154,19 @@ int main() {
         ImGui::Separator();
         ImGui::Spacing();
         
-        // Get draw list
+        // Draw gauges
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         
-        // Set all gauge positions
         float gaugeRadius = 90.0f;
         ImVec2 rollCenter(250, 200);
         ImVec2 rateCenter(700, 200);
         ImVec2 pitchCenter(1150, 200);
         ImVec2 yawCenter(700, 500);
         
-        // Define rate axis labels
-        const char* rollLabels[] = {"0", "90", "180", "90"};
+        const char* rollLabels[] = {"0", "90", "", "90"};
         const char* pitchLabels[] = {"0", "90", "180", "90"};
         const char* yawLabels[] = {"0", "90", "180", "270"};
         
-        // Draw the attitude indicator 
         drawAttitudeGauge(drawList, rollCenter, gaugeRadius, state.roll, 
                          IM_COL32(255, 165, 0, 255), "ROLL", rollLabels);
         drawAttitudeGauge(drawList, pitchCenter, gaugeRadius, state.pitch,
@@ -179,7 +176,7 @@ int main() {
         drawRateIndicator(drawList, rateCenter, 180, 
                          state.rollRate, state.pitchRate, state.yawRate);
         
-        // Create controls to switch between modes
+        // Control mode selection
         ImGui::SetCursorPosY(630);
         ImGui::Text("Control Mode:");
         ImGui::SameLine();
@@ -207,7 +204,7 @@ int main() {
         ImGui::Separator();
         ImGui::Spacing();
         
-        // Design control inputs based on mode
+        // Control inputs
         if (state.mode == RATE_COMMAND) {
             ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), 
                               "Rate Command Mode - Commands rotation rates");
@@ -300,7 +297,7 @@ int main() {
         
         ImGui::End();
         
-        // Render and update the window based on user input
+        // Render
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -312,7 +309,7 @@ int main() {
         glfwSwapBuffers(window);
     }
     
-    // Properly shutdown the window when closed
+    // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
