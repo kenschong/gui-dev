@@ -164,7 +164,7 @@ int main() {
         ImVec2 yawCenter(700, 500);
         
         const char* rollLabels[] = {"0", "90", "", "90"};
-        const char* pitchLabels[] = {"0", "90", "180", "90"};
+        const char* pitchLabels[] = {"0", "90", "180", "-90"};
         const char* yawLabels[] = {"0", "90", "180", "270"};
         
         drawAttitudeGauge(drawList, rollCenter, gaugeRadius, state.roll, 

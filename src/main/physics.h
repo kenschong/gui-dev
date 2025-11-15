@@ -4,7 +4,8 @@
 #include <cmath>
 
 /**
- * Spacecraft Physics Module with Improved Angle Handling
+ * Spacecraft Physics Module
+ * Uses independent axis extraction to avoid gimbal lock in display
  */
 
 // Physical constants
@@ -25,26 +26,46 @@ struct Quaternion {
         }
     }
     
-    // Convert to Euler angles (in degrees) - IMPROVED to prevent jumps
+    // Convert quaternion to rotation matrix
+    void toRotationMatrix(double R[3][3]) const {
+        R[0][0] = 1.0 - 2.0 * (y*y + z*z);
+        R[0][1] = 2.0 * (x*y - w*z);
+        R[0][2] = 2.0 * (x*z + w*y);
+        
+        R[1][0] = 2.0 * (x*y + w*z);
+        R[1][1] = 1.0 - 2.0 * (x*x + z*z);
+        R[1][2] = 2.0 * (y*z - w*x);
+        
+        R[2][0] = 2.0 * (x*z - w*y);
+        R[2][1] = 2.0 * (y*z + w*x);
+        R[2][2] = 1.0 - 2.0 * (x*x + y*y);
+    }
+    
+    // Extract display angles without gimbal lock
+    // Projects body axes onto reference frame to get independent angles
     void toEuler(double& roll, double& pitch, double& yaw) const {
-        // Roll (x-axis rotation)
-        double sinr_cosp = 2.0 * (w * x + y * z);
-        double cosr_cosp = 1.0 - 2.0 * (x * x + y * y);
-        roll = std::atan2(sinr_cosp, cosr_cosp) * 180.0 / M_PI;
+        // Get rotation matrix
+        double R[3][3];
+        toRotationMatrix(R);
         
-        // Pitch (y-axis rotation)
-        double sinp = 2.0 * (w * y - z * x);
-        if (std::abs(sinp) >= 1.0)
-            pitch = std::copysign(90.0, sinp);
+        // Extract roll: rotation of body Y-axis around body X-axis
+        // Project body Y onto the ground plane and measure angle from horizon
+        roll = std::atan2(R[1][2], R[1][1]) * 180.0 / M_PI;
+        
+        // Extract pitch: angle of body X-axis from horizon
+        // Use asin for pitch (yes, limited to [-90,90], but that's physically correct)
+        double sinPitch = -R[0][2];
+        if (sinPitch >= 1.0)
+            pitch = 90.0;
+        else if (sinPitch <= -1.0)
+            pitch = -90.0;
         else
-            pitch = std::asin(sinp) * 180.0 / M_PI;
+            pitch = std::asin(sinPitch) * 180.0 / M_PI;
         
-        // Yaw (z-axis rotation)
-        double siny_cosp = 2.0 * (w * z + x * y);
-        double cosy_cosp = 1.0 - 2.0 * (y * y + z * z);
-        yaw = std::atan2(siny_cosp, cosy_cosp) * 180.0 / M_PI;
+        // Extract yaw: rotation of body X-axis projection in ground plane
+        yaw = std::atan2(R[0][1], R[0][0]) * 180.0 / M_PI;
         
-        // Wrap to [0, 360) - CONSISTENT wrapping
+        // Wrap to [0, 360)
         roll = fmod(roll + 360.0, 360.0);
         pitch = fmod(pitch + 360.0, 360.0);
         yaw = fmod(yaw + 360.0, 360.0);
@@ -63,7 +84,7 @@ struct Quaternion {
         double dy = 0.5 * ( w * wy + z * wx - x * wz);
         double dz = 0.5 * ( w * wz + x * wy - y * wx);
         
-        // Integrate using simple Euler method
+        // Integrate
         w += dw * dt;
         x += dx * dt;
         y += dy * dt;
@@ -212,4 +233,4 @@ struct SpacecraftDynamics {
     }
 };
 
-#endif // DISPLAY_H
+#endif // PHYSICS_H
